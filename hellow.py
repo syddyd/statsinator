@@ -40,13 +40,75 @@ goalie_box.select([
 
 # print(rosters.filter(pl.col('team_id') == 3).head(15)[:, :8])
 
-rankings = (schedule
+games = (schedule
     .filter(pl.col('game_type') == 'regular')
-    .group_by('winner')
-    .agg(pl.len().alias('wins'))
-    .sort('wins', descending=True))
+    )
 
-print(rankings)
+regwinners = (games
+    .filter(pl.col('game_status') == 'Final')
+    .group_by('winner')
+    .agg(pl.len().alias('wins')))
+
+regwinners = regwinners.rename({'winner':'team'})
+
+otwinners = (games 
+    .filter(pl.col('game_status') != 'Final')
+    .group_by('winner')
+    .agg(pl.len().alias('OT wins')))
+
+otwinners = otwinners.rename({'winner':'team'})
+
+otlosers = (
+    games
+    .filter(pl.col('game_status') != 'Final')
+    .with_columns(
+        pl.when(pl.col("home_team") == pl.col("winner"))
+        .then(pl.col("away_team"))
+        .otherwise(pl.col("home_team"))
+        .alias('team')
+    )
+    .group_by('team')
+    .agg(pl.len().alias('OT losses'))
+
+)
+
+standings = (
+    regwinners
+    .join(otwinners, on='team', how='full', coalesce=True)
+    .join(otlosers, on='team', how='full', coalesce=True)
+    .with_columns(
+        pl.col("wins").fill_null(0),
+        pl.col("OT wins").fill_null(0),
+        pl.col("OT losses").fill_null(0),
+    )
+    .with_columns(
+        (30 - (pl.col('wins') + pl.col('OT wins') + pl.col('OT losses')))
+        .alias('losses')
+    )
+    .with_columns(
+        (3 * pl.col('wins') + 2 * pl.col('OT wins') + pl.col('OT losses'))
+        .alias('points')
+    )
+    .sort('points', descending=True)
+) 
+
+#print(schedule.head(10)[:,:8])
+print(regwinners)
+print(otwinners)
+print(otlosers)
+print(standings)
+
+#first job: print the actual point rankings 
+#do I want to do this ^ or should I instead do win% differential vs. E(win%)?
+#both need to get done. Doing the point rankings requires me to parse the winner strings. 
+#it seems more proper to get real rankings up in this bitch so .. 
+
+def pointify():
+
+    return
+
+#point_rankings = (schedule
+#    .filter())
 
 # scoring_leads = (skater_box
 #     .group_by(['player_id', 'first_name', 'last_name'])
