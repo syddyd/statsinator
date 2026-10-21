@@ -3,6 +3,8 @@ import sportsdataverse.pwhl as pwhl
 from sportsdataverse.errors import AssetFetchError, NoDataError
 
 
+pl.Config.set_tbl_cols(12)
+
 # The inaugural season is 2024; this helper tracks the latest known season.
 def safe(label, thunk):
     try:
@@ -108,7 +110,7 @@ def expectedWinsinator():
     i = 0
     for me in teams: 
         stuff[i][0] = me
-        stuff[i][1] = expectedWins(me,2)
+        stuff[i][1] = round(expectedWins(me,3.38),3)
         i+=1
     return stuff
 
@@ -139,10 +141,23 @@ standings = (
         .round(3)
         .alias('win%')
     )
+    .with_columns(
+        (pl.col('win%') - pl.col('E(win%)'))
+        .round(3)
+        .alias('diff')
+    )
     .sort('points', descending=True)
 ) 
 
 print(standings)
+
+avg = 0
+for diff in standings['diff']:
+    avg += diff
+
+avg = avg / 8 
+
+print(round(avg, 5))
 
 
 #first job: print the actual point rankings 
