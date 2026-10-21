@@ -72,14 +72,59 @@ otlosers = (
 
 )
 
+allwinners = (games 
+    .group_by('winner')
+    .agg(pl.len().alias('wins'))
+    )
+
+def pointsFor(team):
+    pf = 0
+    for row in games.iter_rows(named=True):
+        if (row['home_team'] == team):
+            pf += int(row['home_score'])
+        elif (row['away_team'] == team):
+            pf += int(row['away_score'])
+    return pf
+
+def pointsAgainst(team):
+    pa = 0
+    for row in games.iter_rows(named=True):
+        if (row['home_team'] == team):
+            pa += int(row['away_score'])
+        elif (row['away_team'] == team):
+            pa += int(row['home_score'])
+    return pa
+
+def expectedWins(team, alpha):
+    return round(1/(1 + (pointsFor(team)/pointsAgainst(team)) ** (-alpha)), 3)
+
+print(pointsFor('Toronto'))
+print(pointsAgainst('Toronto'))
+print(expectedWins('Toronto', 2))
+
+def expectedWinsinator():
+    teams = ['Ottawa', 'Minnesota', 'Toronto', 'Vancouver', 'New York', 'Seattle', 'Boston', 'Montréal']
+    stuff = [[0] * 2 for _ in range(8)]
+    i = 0
+    for me in teams: 
+        stuff[i][0] = me
+        stuff[i][1] = expectedWins(me,2)
+        i+=1
+    return stuff
+
+eWinsPerTeam = pl.DataFrame(expectedWinsinator(), schema=['team', 'E(win%)'])
+    
+
 standings = (
     regwinners
     .join(otwinners, on='team', how='full', coalesce=True)
     .join(otlosers, on='team', how='full', coalesce=True)
+    .join(eWinsPerTeam, on='team', how='full', coalesce=True)
     .with_columns(
         pl.col("wins").fill_null(0),
         pl.col("OT wins").fill_null(0),
         pl.col("OT losses").fill_null(0),
+        pl.col("E(win%)").fill_null(0)
     )
     .with_columns(
         (30 - (pl.col('wins') + pl.col('OT wins') + pl.col('OT losses')))
@@ -89,23 +134,21 @@ standings = (
         (3 * pl.col('wins') + 2 * pl.col('OT wins') + pl.col('OT losses'))
         .alias('points')
     )
+    .with_columns(
+        ((pl.col('wins')+pl.col('OT wins'))/30)
+        .round(3)
+        .alias('win%')
+    )
     .sort('points', descending=True)
 ) 
 
-#print(schedule.head(10)[:,:8])
-print(regwinners)
-print(otwinners)
-print(otlosers)
 print(standings)
+
 
 #first job: print the actual point rankings 
 #do I want to do this ^ or should I instead do win% differential vs. E(win%)?
 #both need to get done. Doing the point rankings requires me to parse the winner strings. 
 #it seems more proper to get real rankings up in this bitch so .. 
-
-def pointify():
-
-    return
 
 #point_rankings = (schedule
 #    .filter())
