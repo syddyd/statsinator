@@ -12,7 +12,7 @@ Data from sportsdataverse.
 - regularized adjusted plus minus, per team
 - input validation, testing, stability things
 
-## todo 
+## todo:
 - offense and defense coefs from the RAPM, per team
 - assist stats 
 - other player evaluation metrics 
