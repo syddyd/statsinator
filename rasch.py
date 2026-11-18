@@ -1,8 +1,10 @@
 import polars as pl
 import sportsdataverse.pwhl as pwhl
+import numpy as np
 from sportsdataverse.errors import AssetFetchError, NoDataError
 
-pl.Config.set_tbl_cols(12)
+
+pl.Config.set_tbl_cols(15)
 pl.Config.set_tbl_rows(24)
 
 def safe(label, thunk):
@@ -35,7 +37,7 @@ def matMaker(type):
         .with_columns(pl.col('away_team_id').replace(9,7))
     )
     
-    x = [[0] * 8 for _ in range(120)]
+    x = [[0] * 7 for _ in range(240)]
 
     if (type == 'offense'):
         index = 0
@@ -45,23 +47,59 @@ def matMaker(type):
         return ValueError
     
     i = 0
-    print(tmp)
     for row in x: 
-        teamid = int(tmp[i, index])
-        row[teamid - 1] = 1
+        teamid = int(tmp[i, index]) - 1 
+        if (teamid > 0):
+            row[teamid - 1] = 1
         i+=1
+        if (i == 120): i = 0
 
     x = pl.DataFrame(x)
-    print(x)
+    return x
+
+def ymaker():
+    y1 = (schedule
+        .sort(pl.col('game_id'))
+        .filter(pl.col('game_id').cast(pl.Int32) < 338)
+        .select(['home_score'])
+        .rename({'home_score':'team_score'})
+        )
     
-matMaker(type='offense')
+    y2 = (schedule
+        .sort(pl.col('game_id'))
+        .filter(pl.col('game_id').cast(pl.Int32) < 338)
+        .select(['away_score'])
+        .rename({'away_score':'team_score'})
+        )
+        
+    y = pl.concat([y1, y2], how='vertical')
+    return y 
 
-#sparse matrix indicating offensive teams per game 
-xO = (schedule
-    .filter(pl.col('game_id').cast(pl.Int32) < 338)
-    .select(['game_id', 'away_team_id'])
-    )
+def xMaker():
+    ones = pl.DataFrame([1] * 240).rename({'column_0' : 'intercept'})
+    xO = matMaker(type='offense').transpose().rename( lambda col : col.lower().replace("n", "nO"))
+    xD = matMaker(type='defense').transpose()
 
+    X = pl.concat([ones, xO, xD], how='horizontal')
+    return X
 
+def rasch(X : pl.DataFrame, y : pl.DataFrame) -> pl.DataFrame:
+    xT = X.transpose().to_numpy()
+    xn = X.to_numpy()
+    yn = y.to_numpy().astype(int)
 
-#print(y)
+    print(yn.dtype)
+
+    tmp = np.dot(xT, xn)
+    tmp = np.linalg.inv(tmp)
+    tmp = np.dot(tmp, xT)
+    print(tmp.shape)
+    beta = pl.DataFrame(np.dot(tmp, yn))
+    return beta 
+    
+#print(matMaker(type='offense'))
+#print(ymaker())
+
+x = xMaker()
+y = ymaker()
+print(rasch(x, y))
