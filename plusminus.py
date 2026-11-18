@@ -47,7 +47,7 @@ abbys_stats = (skater_box
 )
 
 def generatestats(name): 
-    return (skater_box
+    df = (skater_box
     .filter(pl.col('last_name') == name)
     .filter(pl.col('game_id') < 338)
     .select('game_id','first_name','last_name','toi', 'plus_minus')
@@ -57,8 +57,10 @@ def generatestats(name):
     .with_columns(
         (pl.col('plus_minus') / pl.col('adj_toi'))
         .alias('weighted_PM') 
-    )
-)
+    ))
+    if df.height > 0 : return df 
+    print('Error: player not found') 
+    return None
 
 #print(abbys_stats)
 
