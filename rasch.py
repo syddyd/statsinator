@@ -88,18 +88,39 @@ def rasch(X : pl.DataFrame, y : pl.DataFrame) -> pl.DataFrame:
     xn = X.to_numpy()
     yn = y.to_numpy().astype(int)
 
-    print(yn.dtype)
-
     tmp = np.dot(xT, xn)
     tmp = np.linalg.inv(tmp)
     tmp = np.dot(tmp, xT)
     print(tmp.shape)
     beta = pl.DataFrame(np.dot(tmp, yn))
     return beta 
+
+def findTeam(id : int) -> str:
+    match id : 
+        case 1: return 'Boston'
+        case 2: return 'Minnsota'
+        case 3: return 'Montreal'
+        case 4: return 'New York'
+        case 5: return 'Ottawa'
+        case 6: return 'Toronto'
+        case 7: return 'Vancouver' #originally coded as 9 but i changed it to 7 to fit better in matmaker
+        case 8: return 'Seattle'
+
     
 #print(matMaker(type='offense'))
 #print(ymaker())
 
 x = xMaker()
 y = ymaker()
-print(rasch(x, y))
+results = rasch(x, y)
+#results[0] is the intercept and not particularly interesting 
+
+
+print('\n' + findTeam(1) + " offense : baseline ")
+for i in range(1, 8):
+    print(findTeam(i + 1) + " offense : " + str(round(results.item(i, 0), 3)))
+
+print('\n' + findTeam(1) + " defense : baseline ")
+for c in range(1, 8):
+    print(findTeam(c + 1) + " defense : " + str(round(results.item(7 + c, 0), 3)))
+
