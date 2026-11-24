@@ -7,10 +7,13 @@ Data from sportsdataverse.
 ## done: 
 - unpacking and organizing schedule data
 - expected win % by score differential, compared to actual win %, and tuning
+- rasch model
+- input validation, testing, stability things
+
 
 ## now working: 
 - regularized adjusted plus minus, per team
-- input validation, testing, stability things
+- power play stats (see pp.py for details) 
 
 ## todo:
 - offense and defense coefs from the RAPM, per team
